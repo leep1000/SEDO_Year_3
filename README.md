@@ -52,7 +52,7 @@ Use the Supabase pooler connection string for `DATABASE_URL` and replace the `po
 3. Add the Supabase connection string to `.env` locally and to Render as `DATABASE_URL`.
 4. Run `python -m flask --app run.py seed-db` locally against Supabase once to create the admin user and sample books with hashed passwords.
 
-The app uses Flask/SQLAlchemy for application access control. Supabase is used as the central PostgreSQL database so all users interact with the same data.
+The app uses Flask/SQLAlchemy for application access control. Supabase is used as the central PostgreSQL database so all users interact with the same data. The schema uses `users`, `books`, and `loans` so current book status and borrowing history can both be evidenced.
 
 ## CI/CD
 

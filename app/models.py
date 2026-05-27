@@ -32,6 +32,12 @@ class User(db.Model):
         foreign_keys="Book.checked_out_by_id",
         passive_deletes=True,
     )
+    loans = relationship(
+        "Loan",
+        back_populates="user",
+        foreign_keys="Loan.user_id",
+        passive_deletes=True,
+    )
 
     __table_args__ = (
         CheckConstraint("role in ('regular', 'admin')", name="check_user_role"),
@@ -81,6 +87,12 @@ class Book(db.Model):
         back_populates="checked_out_books",
         foreign_keys=[checked_out_by_id],
     )
+    loans = relationship(
+        "Loan",
+        back_populates="book",
+        foreign_keys="Loan.book_id",
+        passive_deletes=True,
+    )
 
     __table_args__ = (
         CheckConstraint(
@@ -91,3 +103,28 @@ class Book(db.Model):
         UniqueConstraint("isbn", name="uq_books_isbn"),
     )
 
+
+class Loan(db.Model):
+    __tablename__ = "loans"
+
+    id = db.Column(db.Integer, primary_key=True)
+    book_id = db.Column(db.Integer, ForeignKey("books.id", ondelete="CASCADE"), nullable=False)
+    user_id = db.Column(db.Integer, ForeignKey("users.id", ondelete="SET NULL"))
+    checked_out_at = db.Column(
+        db.DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+    returned_at = db.Column(db.DateTime(timezone=True))
+    actioned_by_id = db.Column(db.Integer, ForeignKey("users.id", ondelete="SET NULL"))
+
+    book = relationship("Book", back_populates="loans", foreign_keys=[book_id])
+    user = relationship("User", back_populates="loans", foreign_keys=[user_id])
+    actioned_by = relationship("User", foreign_keys=[actioned_by_id])
+
+    __table_args__ = (
+        CheckConstraint(
+            "returned_at is null or returned_at >= checked_out_at",
+            name="check_loan_return_after_checkout",
+        ),
+    )

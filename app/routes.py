@@ -1,4 +1,5 @@
 from sqlalchemy.exc import IntegrityError
+from datetime import datetime, timezone
 
 from flask import (
     Blueprint,
@@ -12,7 +13,7 @@ from flask import (
 
 from . import db
 from .forms import BookForm, LoginForm, RegisterForm, UserEditForm
-from .models import Book, User
+from .models import Book, Loan, User
 from .security import admin_required, login_required, validate_csrf
 
 bp = Blueprint("library", __name__)
@@ -138,6 +139,13 @@ def checkout_book(book_id):
         return redirect(url_for("library.books"))
     book.status = "checked_out"
     book.checked_out_by_id = session["user_id"]
+    db.session.add(
+        Loan(
+            book_id=book.id,
+            user_id=session["user_id"],
+            actioned_by_id=session["user_id"],
+        )
+    )
     db.session.commit()
     flash("Book checked out successfully.", "success")
     return redirect(url_for("library.books"))
@@ -151,6 +159,14 @@ def return_book(book_id):
     if book.checked_out_by_id != session["user_id"] and session.get("role") != "admin":
         flash("Only the borrower or an admin can return this book.", "danger")
         return redirect(url_for("library.books"))
+    active_loan = (
+        Loan.query.filter_by(book_id=book.id, returned_at=None)
+        .order_by(Loan.checked_out_at.desc())
+        .first()
+    )
+    if active_loan:
+        active_loan.returned_at = datetime.now(timezone.utc)
+        active_loan.actioned_by_id = session["user_id"]
     book.status = "available"
     book.checked_out_by_id = None
     db.session.commit()

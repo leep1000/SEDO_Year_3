@@ -1,4 +1,4 @@
-from app.models import Book
+from app.models import Book, Loan
 from app import db
 
 from .conftest import csrf_token, login
@@ -15,6 +15,32 @@ def test_regular_user_can_browse_and_checkout_books(client):
         follow_redirects=True,
     )
     assert b"Book checked out successfully" in response.data
+
+
+def test_checkout_and_return_records_loan_history(client, app):
+    login(client, "regularuser", "RegularPass123!")
+
+    client.post(
+        "/books/1/checkout",
+        data={"_csrf_token": csrf_token(client)},
+        follow_redirects=True,
+    )
+    with app.app_context():
+        loan = Loan.query.filter_by(book_id=1).first()
+        assert loan is not None
+        assert loan.user_id == 2
+        assert loan.returned_at is None
+
+    response = client.post(
+        "/books/1/return",
+        data={"_csrf_token": csrf_token(client)},
+        follow_redirects=True,
+    )
+
+    assert b"Book returned successfully" in response.data
+    with app.app_context():
+        loan = Loan.query.filter_by(book_id=1).first()
+        assert loan.returned_at is not None
 
 
 def test_regular_user_cannot_add_book(client):

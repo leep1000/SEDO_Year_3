@@ -1,7 +1,7 @@
 import os
 
 from . import db
-from .models import Book, User
+from .models import Book, Loan, User
 
 
 def seed_database():
@@ -49,4 +49,3 @@ def seed_database():
                 )
             )
     db.session.commit()
-
