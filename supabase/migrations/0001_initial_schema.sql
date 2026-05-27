@@ -37,3 +37,9 @@ create index if not exists ix_books_isbn on books(isbn);
 create index if not exists ix_loans_book_id on loans(book_id);
 create index if not exists ix_loans_user_id on loans(user_id);
 create index if not exists ix_loans_active_book on loans(book_id) where returned_at is null;
+
+grant usage on schema public to service_role;
+grant select, insert, update, delete on table users to service_role;
+grant select, insert, update, delete on table books to service_role;
+grant select, insert, update, delete on table loans to service_role;
+grant usage, select on all sequences in schema public to service_role;
