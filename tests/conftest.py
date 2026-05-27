@@ -1,40 +1,33 @@
 import pytest
+from werkzeug.security import generate_password_hash
 
-from app import create_app, db
-from app.models import Book, User
+from app import create_app
+from app.repository import InMemoryRepository
 
 
 @pytest.fixture()
 def app():
+    repo = InMemoryRepository()
     app = create_app(
         {
             "TESTING": True,
-            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
             "SECRET_KEY": "test-secret",
             "WTF_CSRF_ENABLED": True,
+            "REPOSITORY": repo,
         }
     )
-    with app.app_context():
-        db.create_all()
-        admin = User(username="adminuser", role="admin")
-        admin.set_password("AdminPass123!")
-        regular = User(username="regularuser", role="regular")
-        regular.set_password("RegularPass123!")
-        db.session.add_all([admin, regular])
-        db.session.commit()
-        db.session.add(
-            Book(
-                title="Clean Code",
-                author="Robert C. Martin",
-                publication_year=2008,
-                isbn="9780132350884",
-                created_by_id=admin.id,
-            )
-        )
-        db.session.commit()
-        yield app
-        db.session.remove()
-        db.drop_all()
+    admin = repo.create_user("adminuser", generate_password_hash("AdminPass123!"), "admin")
+    repo.create_user("regularuser", generate_password_hash("RegularPass123!"), "regular")
+    repo.create_book(
+        {
+            "title": "Clean Code",
+            "author": "Robert C. Martin",
+            "publication_year": 2008,
+            "isbn": "9780132350884",
+            "created_by_id": admin["id"],
+        }
+    )
+    yield app
 
 
 @pytest.fixture()

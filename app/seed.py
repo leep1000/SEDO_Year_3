@@ -1,28 +1,23 @@
 import os
 
-from . import db
-from .models import Book, Loan, User
+from werkzeug.security import generate_password_hash
+
+from .repository import get_repository
 
 
 def seed_database():
-    db.create_all()
+    repo = get_repository()
 
     admin_username = os.getenv("ADMIN_USERNAME", "adminuser")
     admin_password = os.getenv("ADMIN_PASSWORD", "AdminPass123!")
 
-    admin = User.query.filter_by(username=admin_username).first()
+    admin = repo.find_user_by_username(admin_username)
     if not admin:
-        admin = User(username=admin_username, role="admin")
-        admin.set_password(admin_password)
-        db.session.add(admin)
+        admin = repo.create_user(admin_username, generate_password_hash(admin_password), "admin")
 
-    regular = User.query.filter_by(username="regularuser").first()
+    regular = repo.find_user_by_username("regularuser")
     if not regular:
-        regular = User(username="regularuser", role="regular")
-        regular.set_password("RegularPass123!")
-        db.session.add(regular)
-
-    db.session.commit()
+        repo.create_user("regularuser", generate_password_hash("RegularPass123!"), "regular")
 
     sample_books = [
         ("The C# Player's Guide", "RB Whitaker", 2022, "9780985580131"),
@@ -38,14 +33,15 @@ def seed_database():
     ]
 
     for title, author, year, isbn in sample_books:
-        if not Book.query.filter_by(isbn=isbn).first():
-            db.session.add(
-                Book(
-                    title=title,
-                    author=author,
-                    publication_year=year,
-                    isbn=isbn,
-                    created_by_id=admin.id,
-                )
+        if not any(book["isbn"] == isbn for book in repo.list_books()):
+            repo.create_book(
+                {
+                    "title": title,
+                    "author": author,
+                    "publication_year": year,
+                    "isbn": isbn,
+                    "created_by_id": admin["id"],
+                    "status": "available",
+                    "checked_out_by_id": None,
+                }
             )
-    db.session.commit()

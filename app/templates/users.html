@@ -24,7 +24,7 @@
         <tr>
           <td class="fw-semibold">{{ user.username }}</td>
           <td><span class="badge {{ 'text-bg-primary' if user.role == 'admin' else 'text-bg-secondary' }}">{{ user.role }}</span></td>
-          <td>{{ user.created_at.strftime("%Y-%m-%d") }}</td>
+          <td>{{ user.created_at[:10] }}</td>
           <td>
             <div class="d-flex justify-content-end gap-2">
               <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#editUserModal{{ user.id }}">Edit</button>

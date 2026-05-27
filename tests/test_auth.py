@@ -1,4 +1,4 @@
-from app.models import User
+from werkzeug.security import check_password_hash
 
 from .conftest import csrf_token, login
 
@@ -15,12 +15,11 @@ def test_register_hashes_password_and_assigns_regular_role(client, app):
     )
 
     assert response.status_code == 200
-    with app.app_context():
-        user = User.query.filter_by(username="newuser").first()
-        assert user is not None
-        assert user.role == "regular"
-        assert user.password_hash != "SecurePass123"
-        assert user.check_password("SecurePass123")
+    user = app.config["REPOSITORY"].find_user_by_username("newuser")
+    assert user is not None
+    assert user["role"] == "regular"
+    assert user["password_hash"] != "SecurePass123"
+    assert check_password_hash(user["password_hash"], "SecurePass123")
 
 
 def test_login_rejects_invalid_password(client):

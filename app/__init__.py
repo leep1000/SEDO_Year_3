@@ -3,15 +3,6 @@ from datetime import timedelta
 
 from dotenv import load_dotenv
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-
-db = SQLAlchemy()
-
-
-def _normalise_database_url(url):
-    if url and url.startswith("postgres://"):
-        return "postgresql://" + url[len("postgres://") :]
-    return url
 
 
 def create_app(test_config=None):
@@ -19,13 +10,8 @@ def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
     os.makedirs(app.instance_path, exist_ok=True)
 
-    database_url = _normalise_database_url(
-        os.getenv("DATABASE_URL", "sqlite:///library_dev.db")
-    )
     app.config.from_mapping(
         SECRET_KEY=os.getenv("SECRET_KEY", "dev-only-secret-key"),
-        SQLALCHEMY_DATABASE_URI=database_url,
-        SQLALCHEMY_TRACK_MODIFICATIONS=False,
         PERMANENT_SESSION_LIFETIME=timedelta(hours=2),
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
@@ -37,7 +23,14 @@ def create_app(test_config=None):
     if test_config:
         app.config.update(test_config)
 
-    db.init_app(app)
+    if "REPOSITORY" not in app.config:
+        from .repository import SupabaseRepository
+
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_key = os.getenv("SUPABASE_KEY")
+        if not supabase_url or not supabase_key:
+            raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be configured.")
+        app.config["REPOSITORY"] = SupabaseRepository(supabase_url, supabase_key)
 
     from .routes import bp
 
@@ -65,10 +58,7 @@ def create_app(test_config=None):
 
     @app.cli.command("init-db")
     def init_db_command():
-        from .models import Book, User
-
-        db.create_all()
-        print("Database tables created.")
+        print("Run supabase/migrations/0001_initial_schema.sql in Supabase SQL Editor.")
 
     @app.cli.command("seed-db")
     def seed_db_command():

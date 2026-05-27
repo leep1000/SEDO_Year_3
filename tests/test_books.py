@@ -1,6 +1,3 @@
-from app.models import Book, Loan
-from app import db
-
 from .conftest import csrf_token, login
 
 
@@ -25,11 +22,10 @@ def test_checkout_and_return_records_loan_history(client, app):
         data={"_csrf_token": csrf_token(client)},
         follow_redirects=True,
     )
-    with app.app_context():
-        loan = Loan.query.filter_by(book_id=1).first()
-        assert loan is not None
-        assert loan.user_id == 2
-        assert loan.returned_at is None
+    loan = app.config["REPOSITORY"].loans[0]
+    assert loan is not None
+    assert loan["user_id"] == 2
+    assert loan["returned_at"] is None
 
     response = client.post(
         "/books/1/return",
@@ -38,9 +34,7 @@ def test_checkout_and_return_records_loan_history(client, app):
     )
 
     assert b"Book returned successfully" in response.data
-    with app.app_context():
-        loan = Loan.query.filter_by(book_id=1).first()
-        assert loan.returned_at is not None
+    assert app.config["REPOSITORY"].loans[0]["returned_at"] is not None
 
 
 def test_regular_user_cannot_add_book(client):
@@ -73,15 +67,11 @@ def test_admin_can_add_book(client, app):
         follow_redirects=True,
     )
     assert b"Book added successfully" in response.data
-    with app.app_context():
-        assert Book.query.filter_by(isbn="9781942788331").first() is not None
+    assert any(book["isbn"] == "9781942788331" for book in app.config["REPOSITORY"].books)
 
 
 def test_xss_payload_is_escaped_in_book_table(client, app):
-    with app.app_context():
-        book = Book.query.first()
-        book.title = "<script>alert('xss')</script>"
-        db.session.commit()
+    app.config["REPOSITORY"].books[0]["title"] = "<script>alert('xss')</script>"
 
     login(client)
     response = client.get("/books")

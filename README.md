@@ -5,7 +5,7 @@ Secure Flask web application for managing an organisation's professional develop
 ## Stack
 
 - Flask
-- SQLAlchemy
+- Supabase Python client/API
 - Supabase hosted PostgreSQL
 - Render web service
 - GitHub Actions CI/CD
@@ -37,22 +37,23 @@ The app is designed for Render with a Supabase PostgreSQL database.
 
 Required Render environment variables:
 
-- `DATABASE_URL`
+- `SUPABASE_URL`
+- `SUPABASE_KEY`
 - `SECRET_KEY`
 - `ADMIN_USERNAME`
 - `ADMIN_PASSWORD`
 - `FLASK_ENV=production`
 
-Use the Supabase pooler connection string for `DATABASE_URL` and replace the `postgres://` prefix with `postgresql://` if needed.
+Use a server-side Supabase key for `SUPABASE_KEY`. Do not expose this key in browser code or commit it to GitHub.
 
 ## Supabase Setup
 
 1. Open the Supabase SQL editor.
 2. Run `supabase/migrations/0001_initial_schema.sql`.
-3. Add the Supabase connection string to `.env` locally and to Render as `DATABASE_URL`.
-4. Run `python -m flask --app run.py seed-db` locally against Supabase once to create the admin user and sample books with hashed passwords.
+3. Add `SUPABASE_URL` and `SUPABASE_KEY` to `.env` locally and to Render.
+4. Run `python -m flask --app run.py seed-db` locally once to create the admin user and sample books with hashed passwords.
 
-The app uses Flask/SQLAlchemy for application access control. Supabase is used as the central PostgreSQL database so all users interact with the same data. The schema uses `users`, `books`, and `loans` so current book status and borrowing history can both be evidenced.
+The app uses Flask for application access control and the Supabase Python client/API for database operations. Supabase is used as the central PostgreSQL database so all users interact with the same data. The schema uses `users`, `books`, and `loans` so current book status and borrowing history can both be evidenced.
 
 ## CI/CD
 
