@@ -53,7 +53,7 @@ def test_regular_user_can_add_book(client):
     assert b"Book added successfully" in response.data
 
 
-def test_regular_user_cannot_delete_someone_elses_book(client):
+def test_regular_user_cannot_delete_books(client):
     login(client, "regularuser", "RegularPass123!")
     response = client.post(
         "/books/1/delete",
@@ -61,33 +61,20 @@ def test_regular_user_cannot_delete_someone_elses_book(client):
         follow_redirects=True,
     )
 
-    assert b"You can only delete books that belong to you" in response.data
+    assert b"You do not have permission" in response.data
     assert any(book["id"] == 1 for book in client.application.config["REPOSITORY"].books)
 
 
-def test_regular_user_can_delete_own_book(client, app):
-    login(client, "regularuser", "RegularPass123!")
-    client.post(
-        "/books/add",
-        data={
-            "title": "Owned Book",
-            "author": "Regular User",
-            "publication_year": 2024,
-            "isbn": "1111111111",
-            "_csrf_token": csrf_token(client),
-        },
-        follow_redirects=True,
-    )
-    owned_book = next(book for book in app.config["REPOSITORY"].books if book["isbn"] == "1111111111")
-
+def test_admin_can_delete_book(client, app):
+    login(client)
     response = client.post(
-        f"/books/{owned_book['id']}/delete",
+        "/books/1/delete",
         data={"_csrf_token": csrf_token(client)},
         follow_redirects=True,
     )
 
     assert b"deleted" in response.data
-    assert all(book["id"] != owned_book["id"] for book in app.config["REPOSITORY"].books)
+    assert all(book["id"] != 1 for book in app.config["REPOSITORY"].books)
 
 
 def test_admin_can_add_book(client, app):

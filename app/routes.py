@@ -164,15 +164,13 @@ def return_book(book_id):
 
 @bp.route("/books/<int:book_id>/delete", methods=["POST"])
 @login_required
+@admin_required
 def delete_book(book_id):
     validate_csrf()
     repo = get_repository()
     book = repo.get_book(book_id)
     if not book:
         abort(404)
-    if not _can_delete_book(book):
-        flash("You can only delete books that belong to you.", "danger")
-        return redirect(url_for("library.books"))
     repo.delete_book(book_id)
     flash(f"Book '{book['title']}' deleted.", "success")
     return redirect(url_for("library.books"))
@@ -261,10 +259,6 @@ def _apply_checkout_values(values, checked_out_by_id, repo):
             return
     values["checked_out_by_id"] = None
     values["status"] = "available"
-
-
-def _can_delete_book(book):
-    return session.get("role") == "admin" or book.get("created_by_id") == session.get("user_id")
 
 
 def _flash_form_errors(form):
