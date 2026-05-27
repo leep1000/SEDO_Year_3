@@ -11,9 +11,7 @@
       <input class="form-control" name="q" value="{{ query }}" placeholder="Search catalogue">
       <button class="btn btn-outline-primary" type="submit">Search</button>
     </form>
-    {% if session.role == "admin" %}
-      <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#addBookModal">Add book</button>
-    {% endif %}
+    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#addBookModal">Add book</button>
   </div>
 </section>
 
@@ -62,6 +60,8 @@
               {% endif %}
               {% if session.role == "admin" %}
                 <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#editBookModal{{ book.id }}">Edit</button>
+              {% endif %}
+              {% if session.role == "admin" or book.created_by_id == session.user_id %}
                 <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteBookModal{{ book.id }}">Delete</button>
               {% endif %}
             </div>
@@ -77,7 +77,6 @@
   </div>
 </section>
 
-{% if session.role == "admin" %}
 <div class="modal fade" id="addBookModal" tabindex="-1" aria-labelledby="addBookLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
@@ -101,6 +100,7 @@
 </div>
 
 {% for book in books %}
+{% if session.role == "admin" %}
 <div class="modal fade" id="editBookModal{{ book.id }}" tabindex="-1" aria-labelledby="editBookLabel{{ book.id }}" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
@@ -123,7 +123,9 @@
     </div>
   </div>
 </div>
+{% endif %}
 
+{% if session.role == "admin" or book.created_by_id == session.user_id %}
 <div class="modal fade" id="deleteBookModal{{ book.id }}" tabindex="-1" aria-labelledby="deleteBookLabel{{ book.id }}" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -144,6 +146,6 @@
     </div>
   </div>
 </div>
-{% endfor %}
 {% endif %}
+{% endfor %}
 {% endblock %}

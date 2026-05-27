@@ -18,10 +18,11 @@
           <div class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
             {% if session.username %}
               <a class="nav-link" href="{{ url_for('library.books') }}">Books</a>
+              <a class="nav-link" href="{{ url_for('library.account') }}">Account</a>
               {% if session.role == "admin" %}
                 <a class="nav-link" href="{{ url_for('library.users') }}">Users</a>
               {% endif %}
-              <span class="badge text-bg-light border">{{ session.username }} · {{ session.role }}</span>
+              <span class="badge text-bg-light border">{{ session.username }} - {{ session.role }}</span>
               <form class="d-inline" method="post" action="{{ url_for('library.logout') }}">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <button class="btn btn-outline-secondary btn-sm" type="submit">Log out</button>

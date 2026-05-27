@@ -37,7 +37,7 @@ def test_checkout_and_return_records_loan_history(client, app):
     assert app.config["REPOSITORY"].loans[0]["returned_at"] is not None
 
 
-def test_regular_user_cannot_add_book(client):
+def test_regular_user_can_add_book(client):
     login(client, "regularuser", "RegularPass123!")
     response = client.post(
         "/books/add",
@@ -50,7 +50,44 @@ def test_regular_user_cannot_add_book(client):
         },
         follow_redirects=True,
     )
-    assert b"You do not have permission" in response.data
+    assert b"Book added successfully" in response.data
+
+
+def test_regular_user_cannot_delete_someone_elses_book(client):
+    login(client, "regularuser", "RegularPass123!")
+    response = client.post(
+        "/books/1/delete",
+        data={"_csrf_token": csrf_token(client)},
+        follow_redirects=True,
+    )
+
+    assert b"You can only delete books that belong to you" in response.data
+    assert any(book["id"] == 1 for book in client.application.config["REPOSITORY"].books)
+
+
+def test_regular_user_can_delete_own_book(client, app):
+    login(client, "regularuser", "RegularPass123!")
+    client.post(
+        "/books/add",
+        data={
+            "title": "Owned Book",
+            "author": "Regular User",
+            "publication_year": 2024,
+            "isbn": "1111111111",
+            "_csrf_token": csrf_token(client),
+        },
+        follow_redirects=True,
+    )
+    owned_book = next(book for book in app.config["REPOSITORY"].books if book["isbn"] == "1111111111")
+
+    response = client.post(
+        f"/books/{owned_book['id']}/delete",
+        data={"_csrf_token": csrf_token(client)},
+        follow_redirects=True,
+    )
+
+    assert b"deleted" in response.data
+    assert all(book["id"] != owned_book["id"] for book in app.config["REPOSITORY"].books)
 
 
 def test_admin_can_add_book(client, app):

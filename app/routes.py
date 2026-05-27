@@ -82,7 +82,6 @@ def books():
 
 @bp.route("/books/add", methods=["POST"])
 @login_required
-@admin_required
 def add_book():
     validate_csrf()
     repo = get_repository()
@@ -95,7 +94,8 @@ def add_book():
             "isbn": form.isbn.data.strip(),
             "created_by_id": session["user_id"],
         }
-        _apply_checkout_values(values, form.checked_out_by_id.data, repo)
+        checked_out_by_id = form.checked_out_by_id.data if session.get("role") == "admin" else None
+        _apply_checkout_values(values, checked_out_by_id, repo)
         repo.create_book(values)
         flash("Book added successfully.", "success")
         return redirect(url_for("library.books"))
@@ -164,16 +164,43 @@ def return_book(book_id):
 
 @bp.route("/books/<int:book_id>/delete", methods=["POST"])
 @login_required
-@admin_required
 def delete_book(book_id):
     validate_csrf()
     repo = get_repository()
     book = repo.get_book(book_id)
     if not book:
         abort(404)
+    if not _can_delete_book(book):
+        flash("You can only delete books that belong to you.", "danger")
+        return redirect(url_for("library.books"))
     repo.delete_book(book_id)
     flash(f"Book '{book['title']}' deleted.", "success")
     return redirect(url_for("library.books"))
+
+
+@bp.route("/account")
+@login_required
+def account():
+    user = get_repository().get_user(session["user_id"])
+    if not user:
+        session.clear()
+        flash("Your account could not be found. Please log in again.", "warning")
+        return redirect(url_for("library.login"))
+    return render_template("account.html", user=user)
+
+
+@bp.route("/account/delete", methods=["POST"])
+@login_required
+def delete_account():
+    validate_csrf()
+    repo = get_repository()
+    user = repo.get_user(session["user_id"])
+    if not user:
+        abort(404)
+    repo.delete_user(user["id"])
+    session.clear()
+    flash("Your account has been deleted.", "success")
+    return redirect(url_for("library.login"))
 
 
 @bp.route("/users")
@@ -234,6 +261,10 @@ def _apply_checkout_values(values, checked_out_by_id, repo):
             return
     values["checked_out_by_id"] = None
     values["status"] = "available"
+
+
+def _can_delete_book(book):
+    return session.get("role") == "admin" or book.get("created_by_id") == session.get("user_id")
 
 
 def _flash_form_errors(form):
