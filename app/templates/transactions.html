@@ -4,10 +4,11 @@
 <section class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center mb-4">
   <div>
     <h1 class="h2 mb-1">Transactions</h1>
-    <p class="text-secondary mb-0">Admin audit view of book loans and returns</p>
+    <p class="text-secondary mb-0">{{ description }}</p>
   </div>
 </section>
 
+{% if show_filters %}
 <section class="card shadow-sm mb-4">
   <div class="card-body">
     <form class="row g-3 align-items-end" method="get">
@@ -44,6 +45,7 @@
     </form>
   </div>
 </section>
+{% endif %}
 
 <section class="card shadow-sm">
   <div class="table-responsive">

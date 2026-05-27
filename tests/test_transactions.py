@@ -71,3 +71,54 @@ def test_admin_can_filter_transactions_by_user_and_date_range(client, app):
 
     assert "Accelerate" in results
     assert "Clean Code" not in results
+
+
+def test_regular_user_can_view_only_own_transactions(client, app):
+    repo = app.config["REPOSITORY"]
+    third_user = repo.create_user("thirduser", "hash", "regular")
+    second_book = repo.create_book(
+        {
+            "title": "Third User Book",
+            "author": "Example Author",
+            "publication_year": 2024,
+            "isbn": "1111111111",
+            "created_by_id": 1,
+        }
+    )
+
+    login(client, "regularuser", "RegularPass123!")
+    client.post("/books/1/checkout", data={"_csrf_token": csrf_token(client)}, follow_redirects=True)
+    repo.update_book(second_book["id"], {"status": "checked_out", "checked_out_by_id": third_user["id"]})
+    repo.create_loan(second_book["id"], third_user["id"], third_user["id"])
+
+    response = client.get("/my-transactions")
+    results = _results_html(response)
+
+    assert response.status_code == 200
+    assert "Clean Code" in results
+    assert "Third User Book" not in results
+
+
+def test_my_transactions_ignores_user_id_query_parameter(client, app):
+    repo = app.config["REPOSITORY"]
+    third_user = repo.create_user("thirduser", "hash", "regular")
+    second_book = repo.create_book(
+        {
+            "title": "Third User Book",
+            "author": "Example Author",
+            "publication_year": 2024,
+            "isbn": "2222222222",
+            "created_by_id": 1,
+        }
+    )
+
+    login(client, "regularuser", "RegularPass123!")
+    client.post("/books/1/checkout", data={"_csrf_token": csrf_token(client)}, follow_redirects=True)
+    repo.update_book(second_book["id"], {"status": "checked_out", "checked_out_by_id": third_user["id"]})
+    repo.create_loan(second_book["id"], third_user["id"], third_user["id"])
+
+    response = client.get(f"/my-transactions?user_id={third_user['id']}")
+    results = _results_html(response)
+
+    assert "Clean Code" in results
+    assert "Third User Book" not in results

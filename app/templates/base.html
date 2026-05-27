@@ -19,6 +19,7 @@
             {% if session.username %}
               <a class="nav-link" href="{{ url_for('library.books') }}">Books</a>
               <a class="nav-link" href="{{ url_for('library.account') }}">Account</a>
+              <a class="nav-link" href="{{ url_for('library.my_transactions') }}">My Transactions</a>
               {% if session.role == "admin" %}
                 <a class="nav-link" href="{{ url_for('library.users') }}">Users</a>
                 <a class="nav-link" href="{{ url_for('library.transactions') }}">Transactions</a>

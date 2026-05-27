@@ -228,6 +228,24 @@ def transactions():
         users=repo.list_users(),
         books=repo.list_books(),
         filters=filters,
+        show_filters=True,
+        description="Admin audit view of book loans and returns",
+    )
+
+
+@bp.route("/my-transactions")
+@login_required
+def my_transactions():
+    repo = get_repository()
+    filters = {"user_id": str(session["user_id"])}
+    return render_template(
+        "transactions.html",
+        loans=repo.list_loans(filters),
+        users=[],
+        books=[],
+        filters=filters,
+        show_filters=False,
+        description="Your personal book loan history",
     )
 
 
