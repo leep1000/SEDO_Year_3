@@ -72,7 +72,7 @@ def test_book_amazon_link_must_be_amazon_uk(client):
     assert b"The link must start with https://www.amazon.co.uk/" in response.data
 
 
-def test_regular_user_cannot_delete_books(client):
+def test_regular_user_cannot_delete_books_added_by_others(client):
     login(client, "regularuser", "RegularPass123!")
     response = client.post(
         "/books/1/delete",
@@ -80,8 +80,34 @@ def test_regular_user_cannot_delete_books(client):
         follow_redirects=True,
     )
 
-    assert b"You do not have permission" in response.data
+    assert b"You can only delete books that you added" in response.data
     assert any(book["id"] == 1 for book in client.application.config["REPOSITORY"].books)
+
+
+def test_regular_user_can_delete_own_book(client, app):
+    login(client, "regularuser", "RegularPass123!")
+    client.post(
+        "/books/add",
+        data={
+            "title": "Owned Book",
+            "author": "Regular User",
+            "publication_year": 2024,
+            "isbn": "1111111111",
+            "amazon_url": "https://www.amazon.co.uk/s?k=1111111111",
+            "_csrf_token": csrf_token(client),
+        },
+        follow_redirects=True,
+    )
+    owned_book = next(book for book in app.config["REPOSITORY"].books if book["isbn"] == "1111111111")
+
+    response = client.post(
+        f"/books/{owned_book['id']}/delete",
+        data={"_csrf_token": csrf_token(client)},
+        follow_redirects=True,
+    )
+
+    assert b"deleted" in response.data
+    assert all(book["id"] != owned_book["id"] for book in app.config["REPOSITORY"].books)
 
 
 def test_admin_can_delete_book(client, app):
