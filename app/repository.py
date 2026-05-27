@@ -43,6 +43,7 @@ class SupabaseRepository:
         return response.data[0] if response.data else None
 
     def delete_user(self, user_id):
+        self.return_books_for_user(user_id, user_id)
         self.client.table("users").delete().eq("id", user_id).execute()
 
     def list_books(self, query=""):
@@ -105,6 +106,20 @@ class SupabaseRepository:
                 {"returned_at": now_iso(), "actioned_by_id": actioned_by_id}
             ).eq("id", active[0]["id"]).execute()
 
+    def return_books_for_user(self, user_id, actioned_by_id):
+        checked_out_books = (
+            self.client.table("books")
+            .select("id")
+            .eq("checked_out_by_id", user_id)
+            .execute()
+            .data
+        )
+        for book in checked_out_books:
+            self.close_active_loan(book["id"], actioned_by_id)
+        self.client.table("books").update(
+            {"status": "available", "checked_out_by_id": None, "updated_at": now_iso()}
+        ).eq("checked_out_by_id", user_id).execute()
+
     def enrich_book(self, book):
         book = dict(book)
         book["checked_out_user"] = (
@@ -154,11 +169,8 @@ class InMemoryRepository:
         return deepcopy(user)
 
     def delete_user(self, user_id):
+        self.return_books_for_user(user_id, user_id)
         self.users = [u for u in self.users if u["id"] != int(user_id)]
-        for book in self.books:
-            if book.get("checked_out_by_id") == int(user_id):
-                book["checked_out_by_id"] = None
-                book["status"] = "available"
 
     def list_books(self, query=""):
         books = sorted(deepcopy(self.books), key=lambda b: b["title"])
@@ -222,6 +234,14 @@ class InMemoryRepository:
             active[-1]["returned_at"] = now_iso()
             active[-1]["actioned_by_id"] = int(actioned_by_id)
 
+    def return_books_for_user(self, user_id, actioned_by_id):
+        for book in self.books:
+            if book.get("checked_out_by_id") == int(user_id):
+                self.close_active_loan(book["id"], actioned_by_id)
+                book["checked_out_by_id"] = None
+                book["status"] = "available"
+                book["updated_at"] = now_iso()
+
     def enrich_book(self, book):
         book["checked_out_user"] = (
             self.get_user(book["checked_out_by_id"]) if book.get("checked_out_by_id") else None
@@ -235,4 +255,3 @@ class InMemoryRepository:
 
 def get_repository():
     return current_app.config["REPOSITORY"]
-
