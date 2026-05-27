@@ -210,6 +210,27 @@ def users():
     return render_template("users.html", users=get_repository().list_users())
 
 
+@bp.route("/transactions")
+@login_required
+@admin_required
+def transactions():
+    repo = get_repository()
+    filters = {
+        "user_id": request.args.get("user_id", "").strip(),
+        "book_id": request.args.get("book_id", "").strip(),
+        "start_date": request.args.get("start_date", "").strip(),
+        "end_date": request.args.get("end_date", "").strip(),
+    }
+    filters = {key: value for key, value in filters.items() if value}
+    return render_template(
+        "transactions.html",
+        loans=repo.list_loans(filters),
+        users=repo.list_users(),
+        books=repo.list_books(),
+        filters=filters,
+    )
+
+
 @bp.route("/users/<int:user_id>/edit", methods=["POST"])
 @login_required
 @admin_required

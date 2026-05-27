@@ -120,6 +120,31 @@ class SupabaseRepository:
             {"status": "available", "checked_out_by_id": None, "updated_at": now_iso()}
         ).eq("checked_out_by_id", user_id).execute()
 
+    def list_loans(self, filters=None):
+        filters = filters or {}
+        query = self.client.table("loans").select("*").order("checked_out_at", desc=True)
+        if filters.get("user_id"):
+            query = query.eq("user_id", filters["user_id"])
+        if filters.get("book_id"):
+            query = query.eq("book_id", filters["book_id"])
+        if filters.get("start_date"):
+            query = query.gte("checked_out_at", f"{filters['start_date']}T00:00:00+00:00")
+        if filters.get("end_date"):
+            query = query.lte("checked_out_at", f"{filters['end_date']}T23:59:59+00:00")
+        return [self.enrich_loan(loan) for loan in query.execute().data]
+
+    def enrich_loan(self, loan):
+        loan = dict(loan)
+        loan["user"] = self.get_user(loan["user_id"]) if loan.get("user_id") else None
+        loan["actioned_by"] = (
+            self.get_user(loan["actioned_by_id"]) if loan.get("actioned_by_id") else None
+        )
+        book_response = (
+            self.client.table("books").select("*").eq("id", loan["book_id"]).limit(1).execute()
+        )
+        loan["book"] = book_response.data[0] if book_response.data else None
+        return loan
+
     def enrich_book(self, book):
         book = dict(book)
         book["checked_out_user"] = (
@@ -241,6 +266,25 @@ class InMemoryRepository:
                 book["checked_out_by_id"] = None
                 book["status"] = "available"
                 book["updated_at"] = now_iso()
+
+    def list_loans(self, filters=None):
+        filters = filters or {}
+        loans = deepcopy(self.loans)
+        if filters.get("user_id"):
+            loans = [loan for loan in loans if loan["user_id"] == int(filters["user_id"])]
+        if filters.get("book_id"):
+            loans = [loan for loan in loans if loan["book_id"] == int(filters["book_id"])]
+        if filters.get("start_date"):
+            loans = [loan for loan in loans if loan["checked_out_at"][:10] >= filters["start_date"]]
+        if filters.get("end_date"):
+            loans = [loan for loan in loans if loan["checked_out_at"][:10] <= filters["end_date"]]
+        return [self.enrich_loan(loan) for loan in sorted(loans, key=lambda l: l["checked_out_at"], reverse=True)]
+
+    def enrich_loan(self, loan):
+        loan["user"] = self.get_user(loan["user_id"]) if loan.get("user_id") else None
+        loan["actioned_by"] = self.get_user(loan["actioned_by_id"]) if loan.get("actioned_by_id") else None
+        loan["book"] = deepcopy(self._find(self.books, loan["book_id"]))
+        return loan
 
     def enrich_book(self, book):
         book["checked_out_user"] = (

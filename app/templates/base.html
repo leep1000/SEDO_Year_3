@@ -21,6 +21,7 @@
               <a class="nav-link" href="{{ url_for('library.account') }}">Account</a>
               {% if session.role == "admin" %}
                 <a class="nav-link" href="{{ url_for('library.users') }}">Users</a>
+                <a class="nav-link" href="{{ url_for('library.transactions') }}">Transactions</a>
               {% endif %}
               <span class="badge text-bg-light border">{{ session.username }} - {{ session.role }}</span>
               <form class="d-inline" method="post" action="{{ url_for('library.logout') }}">

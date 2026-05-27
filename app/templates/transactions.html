@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Transactions{% endblock %}
+{% block content %}
+<section class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center mb-4">
+  <div>
+    <h1 class="h2 mb-1">Transactions</h1>
+    <p class="text-secondary mb-0">Admin audit view of book loans and returns</p>
+  </div>
+</section>
+
+<section class="card shadow-sm mb-4">
+  <div class="card-body">
+    <form class="row g-3 align-items-end" method="get">
+      <div class="col-md-3">
+        <label class="form-label" for="user_id">User</label>
+        <select class="form-select" id="user_id" name="user_id">
+          <option value="">All users</option>
+          {% for user in users %}
+            <option value="{{ user.id }}" {% if filters.user_id == user.id|string %}selected{% endif %}>{{ user.username }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="book_id">Book</label>
+        <select class="form-select" id="book_id" name="book_id">
+          <option value="">All books</option>
+          {% for book in books %}
+            <option value="{{ book.id }}" {% if filters.book_id == book.id|string %}selected{% endif %}>{{ book.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label" for="start_date">From</label>
+        <input class="form-control" id="start_date" name="start_date" type="date" value="{{ filters.start_date or '' }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label" for="end_date">To</label>
+        <input class="form-control" id="end_date" name="end_date" type="date" value="{{ filters.end_date or '' }}">
+      </div>
+      <div class="col-md-2 d-flex gap-2">
+        <button class="btn btn-primary" type="submit">Filter</button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('library.transactions') }}">Reset</a>
+      </div>
+    </form>
+  </div>
+</section>
+
+<section class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Book</th>
+          <th>User</th>
+          <th>Checked out</th>
+          <th>Returned</th>
+          <th>Actioned by</th>
+        </tr>
+      </thead>
+      <tbody data-testid="transactions-results">
+        {% for loan in loans %}
+        <tr>
+          <td>{{ loan.book.title if loan.book else "Deleted book" }}</td>
+          <td>{{ loan.user.username if loan.user else "Deleted user" }}</td>
+          <td>{{ loan.checked_out_at[:16].replace("T", " ") }}</td>
+          <td>
+            {% if loan.returned_at %}
+              {{ loan.returned_at[:16].replace("T", " ") }}
+            {% else %}
+              <span class="badge text-bg-warning">Active</span>
+            {% endif %}
+          </td>
+          <td>{{ loan.actioned_by.username if loan.actioned_by else "System" }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td class="text-center text-secondary py-5" colspan="5">No transactions found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
