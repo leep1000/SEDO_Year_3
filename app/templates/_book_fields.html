@@ -1,0 +1,25 @@
+<div class="mb-3">
+  <label class="form-label" for="{{ prefix }}title">Title</label>
+  <input class="form-control" id="{{ prefix }}title" name="title" required maxlength="200" value="{{ existing_book.title if existing_book is defined else '' }}">
+</div>
+<div class="mb-3">
+  <label class="form-label" for="{{ prefix }}author">Author</label>
+  <input class="form-control" id="{{ prefix }}author" name="author" required maxlength="100" value="{{ existing_book.author if existing_book is defined else '' }}">
+</div>
+<div class="mb-3">
+  <label class="form-label" for="{{ prefix }}publication_year">Publication year</label>
+  <input class="form-control" id="{{ prefix }}publication_year" name="publication_year" type="number" required min="1600" max="2030" value="{{ existing_book.publication_year if existing_book is defined else '' }}">
+</div>
+<div class="mb-3">
+  <label class="form-label" for="{{ prefix }}isbn">ISBN</label>
+  <input class="form-control" id="{{ prefix }}isbn" name="isbn" required minlength="10" maxlength="20" pattern="[0-9Xx-]+" value="{{ existing_book.isbn if existing_book is defined else '' }}">
+</div>
+<div class="mb-3">
+  <label class="form-label" for="{{ prefix }}checked_out_by_id">Checked out by</label>
+  <select class="form-select" id="{{ prefix }}checked_out_by_id" name="checked_out_by_id">
+    <option value="">Available</option>
+    {% for user in users %}
+      <option value="{{ user.id }}" {% if existing_book is defined and existing_book.checked_out_by_id == user.id %}selected{% endif %}>{{ user.username }}</option>
+    {% endfor %}
+  </select>
+</div>
