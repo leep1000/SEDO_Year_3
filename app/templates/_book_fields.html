@@ -15,6 +15,10 @@
   <input class="form-control" id="{{ prefix }}isbn" name="isbn" required minlength="10" maxlength="20" pattern="[0-9Xx-]+" value="{{ existing_book.isbn if existing_book is defined else '' }}">
 </div>
 <div class="mb-3">
+  <label class="form-label" for="{{ prefix }}amazon_url">Amazon UK link</label>
+  <input class="form-control" id="{{ prefix }}amazon_url" name="amazon_url" type="url" maxlength="500" pattern="https://(www\.)?amazon\.co\.uk/.*" value="{{ existing_book.amazon_url if existing_book is defined and existing_book.amazon_url else '' }}">
+</div>
+<div class="mb-3">
   <label class="form-label" for="{{ prefix }}checked_out_by_id">Checked out by</label>
   <select class="form-select" id="{{ prefix }}checked_out_by_id" name="checked_out_by_id">
     <option value="">Available</option>

@@ -92,6 +92,7 @@ def add_book():
             "author": form.author.data.strip(),
             "publication_year": form.publication_year.data,
             "isbn": form.isbn.data.strip(),
+            "amazon_url": form.amazon_url.data.strip() or None,
             "created_by_id": session["user_id"],
         }
         checked_out_by_id = form.checked_out_by_id.data if session.get("role") == "admin" else None
@@ -119,6 +120,7 @@ def edit_book(book_id):
             "author": form.author.data.strip(),
             "publication_year": form.publication_year.data,
             "isbn": form.isbn.data.strip(),
+            "amazon_url": form.amazon_url.data.strip() or None,
         }
         _apply_checkout_values(values, form.checked_out_by_id.data, repo)
         repo.update_book(book_id, values)

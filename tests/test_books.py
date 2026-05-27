@@ -46,11 +46,30 @@ def test_regular_user_can_add_book(client):
             "author": "Nicole Forsgren",
             "publication_year": 2018,
             "isbn": "9781942788331",
+            "amazon_url": "https://www.amazon.co.uk/s?k=9781942788331",
             "_csrf_token": csrf_token(client),
         },
         follow_redirects=True,
     )
     assert b"Book added successfully" in response.data
+
+
+def test_book_amazon_link_must_be_amazon_uk(client):
+    login(client)
+    response = client.post(
+        "/books/add",
+        data={
+            "title": "Invalid Link Book",
+            "author": "Example Author",
+            "publication_year": 2024,
+            "isbn": "1234567890",
+            "amazon_url": "https://example.com/book",
+            "_csrf_token": csrf_token(client),
+        },
+        follow_redirects=True,
+    )
+
+    assert b"The link must start with https://www.amazon.co.uk/" in response.data
 
 
 def test_regular_user_cannot_delete_books(client):
@@ -86,12 +105,17 @@ def test_admin_can_add_book(client, app):
             "author": "Nicole Forsgren",
             "publication_year": 2018,
             "isbn": "9781942788331",
+            "amazon_url": "https://www.amazon.co.uk/s?k=9781942788331",
             "_csrf_token": csrf_token(client),
         },
         follow_redirects=True,
     )
     assert b"Book added successfully" in response.data
     assert any(book["isbn"] == "9781942788331" for book in app.config["REPOSITORY"].books)
+    assert any(
+        book.get("amazon_url") == "https://www.amazon.co.uk/s?k=9781942788331"
+        for book in app.config["REPOSITORY"].books
+    )
 
 
 def test_xss_payload_is_escaped_in_book_table(client, app):

@@ -13,6 +13,7 @@ create table if not exists books (
     author varchar(100) not null,
     publication_year integer not null,
     isbn varchar(20) not null unique,
+    amazon_url varchar(500),
     status varchar(20) not null default 'available',
     created_by_id integer references users(id) on delete set null,
     checked_out_by_id integer references users(id) on delete set null,

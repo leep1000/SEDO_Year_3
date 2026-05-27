@@ -40,6 +40,7 @@ def seed_database():
                     "author": author,
                     "publication_year": year,
                     "isbn": isbn,
+                    "amazon_url": f"https://www.amazon.co.uk/s?k={isbn}",
                     "created_by_id": admin["id"],
                     "status": "available",
                     "checked_out_by_id": None,

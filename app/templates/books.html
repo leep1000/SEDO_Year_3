@@ -24,6 +24,7 @@
           <th>Author</th>
           <th>Year</th>
           <th>ISBN</th>
+          <th>Amazon UK</th>
           <th>Status</th>
           <th>Loans</th>
           <th class="text-end">Actions</th>
@@ -36,6 +37,13 @@
           <td>{{ book.author }}</td>
           <td>{{ book.publication_year }}</td>
           <td><code>{{ book.isbn }}</code></td>
+          <td>
+            {% if book.amazon_url %}
+              <a class="btn btn-sm btn-outline-secondary" href="{{ book.amazon_url }}" target="_blank" rel="noopener noreferrer">View</a>
+            {% else %}
+              <span class="text-secondary">Not set</span>
+            {% endif %}
+          </td>
           <td>
             {% if book.checked_out_user %}
               <span class="badge text-bg-warning">Checked out</span>
@@ -69,7 +77,7 @@
         </tr>
         {% else %}
         <tr>
-          <td class="text-center text-secondary py-5" colspan="7">No books found.</td>
+          <td class="text-center text-secondary py-5" colspan="8">No books found.</td>
         </tr>
         {% endfor %}
       </tbody>

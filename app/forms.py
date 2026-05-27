@@ -51,10 +51,21 @@ class BookForm(Form):
             validators.Regexp(r"^[0-9Xx-]+$", message="ISBN can only contain numbers, X and hyphens."),
         ],
     )
+    amazon_url = StringField(
+        "Amazon UK link",
+        [
+            validators.Optional(),
+            validators.Length(max=500),
+            validators.URL(require_tld=True, message="Enter a valid Amazon UK URL."),
+            validators.Regexp(
+                r"^https://(www\.)?amazon\.co\.uk/",
+                message="The link must start with https://www.amazon.co.uk/.",
+            ),
+        ],
+    )
     checked_out_by_id = IntegerField("Checked out by", [validators.Optional()])
 
 
 class UserEditForm(Form):
     username = StringField("Username", [validators.DataRequired(), validators.Length(min=3, max=50)])
     role = SelectField("Role", choices=[("regular", "Regular"), ("admin", "Admin")])
-
