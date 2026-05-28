@@ -1,19 +1,26 @@
 {% extends "base.html" %}
 {% block title %}SEDO Library{% endblock %}
 {% block content %}
-<section class="row align-items-center min-vh-75 py-5">
-  <div class="col-lg-8">
-    <p class="text-uppercase text-primary fw-semibold small mb-2">Fujitsu professional development library</p>
-    <h1 class="display-4 fw-bold mb-3">Manage shared technical books securely.</h1>
-    <p class="lead text-secondary mb-4">
-      Browse the catalogue, track borrowing, and give administrators controlled tools for maintaining the central database.
+<section class="home-hero min-vh-75 my-4" aria-label="Fujitsu apprentice library">
+  <img
+    class="home-hero__image"
+    src="{{ url_for('static', filename='library-hero.png') }}"
+    alt="A shared office library with apprentices browsing books"
+  >
+  <div class="home-hero__overlay"></div>
+  <div class="home-hero__content">
+    <p class="fujitsu-wordmark mb-3">FUJITSU</p>
+    <p class="text-uppercase fw-semibold small mb-2 home-hero__eyebrow">Apprentice book library</p>
+    <h1 class="display-4 fw-bold mb-3">Borrow a book, return it, keep the shelf moving.</h1>
+    <p class="lead mb-4">
+      A simple internal library for apprentices to share learning books and track who has what.
     </p>
-    <div class="d-flex gap-2">
+    <div class="d-flex flex-column flex-sm-row gap-2">
       {% if session.username %}
-        <a class="btn btn-primary btn-lg" href="{{ url_for('library.books') }}">View books</a>
+        <a class="btn btn-light btn-lg" href="{{ url_for('library.books') }}">Open library</a>
       {% else %}
-        <a class="btn btn-primary btn-lg" href="{{ url_for('library.login') }}">Log in</a>
-        <a class="btn btn-outline-primary btn-lg" href="{{ url_for('library.register') }}">Register</a>
+        <a class="btn btn-light btn-lg" href="{{ url_for('library.login') }}">Log in</a>
+        <a class="btn btn-outline-light btn-lg" href="{{ url_for('library.register') }}">Create account</a>
       {% endif %}
     </div>
   </div>
