@@ -53,6 +53,7 @@ def test_admin_deleting_user_returns_their_books(client, app):
     assert book["status"] == "available"
     assert book["checked_out_by_id"] is None
     assert app.config["REPOSITORY"].loans[0]["returned_at"] is not None
+    assert app.config["REPOSITORY"].loans[0]["actioned_by_id"] == 1
 
 
 def test_regular_user_can_delete_own_account(client, app):
@@ -85,3 +86,4 @@ def test_self_deleting_user_returns_their_books(client, app):
     assert book["status"] == "available"
     assert book["checked_out_by_id"] is None
     assert app.config["REPOSITORY"].loans[0]["returned_at"] is not None
+    assert app.config["REPOSITORY"].loans[0]["actioned_by_id"] == 2

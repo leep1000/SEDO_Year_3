@@ -1,7 +1,5 @@
 import os
 
-from werkzeug.security import generate_password_hash
-
 from .repository import get_repository
 
 
@@ -11,13 +9,8 @@ def seed_database():
     admin_username = os.getenv("ADMIN_USERNAME", "adminuser")
     admin_password = os.getenv("ADMIN_PASSWORD", "AdminPass123!")
 
-    admin = repo.find_user_by_username(admin_username)
-    if not admin:
-        admin = repo.create_user(admin_username, generate_password_hash(admin_password), "admin")
-
-    regular = repo.find_user_by_username("regularuser")
-    if not regular:
-        repo.create_user("regularuser", generate_password_hash("RegularPass123!"), "regular")
+    admin = _ensure_seed_user(repo, admin_username, admin_password, "admin")
+    _ensure_seed_user(repo, "regularuser", "RegularPass123!", "regular")
 
     sample_books = [
         ("The C# Player's Guide", "RB Whitaker", 2022, "9780985580131"),
@@ -33,7 +26,7 @@ def seed_database():
     ]
 
     for title, author, year, isbn in sample_books:
-        if not any(book["isbn"] == isbn for book in repo.list_books()):
+        if not any(book["isbn"] == isbn for book in repo.list_books(use_service=True)):
             repo.create_book(
                 {
                     "title": title,
@@ -44,5 +37,15 @@ def seed_database():
                     "created_by_id": admin["id"],
                     "status": "available",
                     "checked_out_by_id": None,
-                }
+                },
+                use_service=True,
             )
+
+
+def _ensure_seed_user(repo, username, password, role):
+    user = repo.find_user_by_username(username, use_service=True)
+    if not user:
+        return repo.create_user(username, password, role)
+    if not user.get("auth_user_id"):
+        return repo.link_user_to_auth(user["id"], username, password, role)
+    return user

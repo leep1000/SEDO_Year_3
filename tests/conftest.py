@@ -1,5 +1,4 @@
 import pytest
-from werkzeug.security import generate_password_hash
 
 from app import create_app
 from app.repository import InMemoryRepository
@@ -16,8 +15,8 @@ def app():
             "REPOSITORY": repo,
         }
     )
-    admin = repo.create_user("adminuser", generate_password_hash("AdminPass123!"), "admin")
-    repo.create_user("regularuser", generate_password_hash("RegularPass123!"), "regular")
+    admin = repo.create_user("adminuser", "AdminPass123!", "admin")
+    repo.create_user("regularuser", "RegularPass123!", "regular")
     repo.create_book(
         {
             "title": "Clean Code",
@@ -50,4 +49,3 @@ def login(client, username="adminuser", password="AdminPass123!"):
         data={"username": username, "password": password, "_csrf_token": csrf_token(client)},
         follow_redirects=True,
     )
-

@@ -1,9 +1,6 @@
-insert into users (username, password_hash, role)
-values
-    ('adminuser', 'set-by-flask-seed-db-command', 'admin'),
-    ('regularuser', 'set-by-flask-seed-db-command', 'regular')
-on conflict (username) do nothing;
-
--- Use `python -m flask --app run.py seed-db` after configuring DATABASE_URL
--- so seeded users receive secure Werkzeug password hashes.
-
+-- Seeding now uses Supabase Auth, so users cannot be inserted directly with SQL.
+-- After running the migrations, run:
+--     python -m flask --app run.py seed-db
+--
+-- The Flask seed command creates confirmed Supabase Auth users, links them to
+-- public.users.auth_user_id, and then inserts the sample books.

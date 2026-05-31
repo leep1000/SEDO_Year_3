@@ -8,7 +8,6 @@ from flask import (
     session,
     url_for,
 )
-from werkzeug.security import check_password_hash, generate_password_hash
 
 from .forms import BookForm, LoginForm, RegisterForm, UserEditForm
 from .repository import get_repository
@@ -28,13 +27,21 @@ def login():
     if request.method == "POST":
         validate_csrf()
         repo = get_repository()
-        user = repo.find_user_by_username(form.username.data.strip())
-        if form.validate() and user and check_password_hash(user["password_hash"], form.password.data):
+        auth_result = (
+            repo.authenticate_user(form.username.data.strip(), form.password.data)
+            if form.validate()
+            else None
+        )
+        if auth_result:
+            user = auth_result["user"]
             session.clear()
             session.permanent = True
             session["user_id"] = user["id"]
             session["username"] = user["username"]
             session["role"] = user["role"]
+            session["supabase_access_token"] = auth_result["access_token"]
+            session["supabase_refresh_token"] = auth_result["refresh_token"]
+            session["supabase_expires_at"] = auth_result["expires_at"]
             flash("Login successful.", "success")
             return redirect(url_for("library.books"))
         flash("Invalid username or password.", "danger")
@@ -57,10 +64,10 @@ def register():
         validate_csrf()
         repo = get_repository()
         username = form.username.data.strip() if form.username.data else ""
-        if repo.find_user_by_username(username):
+        if repo.find_user_by_username(username, use_service=True):
             form.username.errors.append("Username already exists.")
         if form.validate() and not form.username.errors:
-            repo.create_user(username, generate_password_hash(form.password.data), "regular")
+            repo.create_user(username, form.password.data, "regular")
             flash("Registration successful. Please log in.", "success")
             return redirect(url_for("library.login"))
         _flash_form_errors(form)
@@ -199,7 +206,7 @@ def delete_account():
     user = repo.get_user(session["user_id"])
     if not user:
         abort(404)
-    repo.delete_user(user["id"])
+    repo.delete_user(user["id"], session["user_id"])
     session.clear()
     flash("Your account has been deleted.", "success")
     return redirect(url_for("library.login"))
@@ -288,7 +295,7 @@ def delete_user(user_id):
     user = repo.get_user(user_id)
     if not user:
         abort(404)
-    repo.delete_user(user_id)
+    repo.delete_user(user_id, session["user_id"])
     flash(f"User '{user['username']}' deleted.", "success")
     return redirect(url_for("library.users"))
 

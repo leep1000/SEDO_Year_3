@@ -27,10 +27,15 @@ def create_app(test_config=None):
         from .repository import SupabaseRepository
 
         supabase_url = os.getenv("SUPABASE_URL")
-        supabase_key = os.getenv("SUPABASE_KEY")
-        if not supabase_url or not supabase_key:
-            raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be configured.")
-        app.config["REPOSITORY"] = SupabaseRepository(supabase_url, supabase_key)
+        supabase_anon_key = os.getenv("SUPABASE_ANON_KEY") or os.getenv("SUPABASE_KEY")
+        supabase_service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        if not supabase_url or not supabase_anon_key:
+            raise RuntimeError("SUPABASE_URL and SUPABASE_ANON_KEY must be configured.")
+        app.config["REPOSITORY"] = SupabaseRepository(
+            supabase_url,
+            supabase_anon_key,
+            supabase_service_role_key,
+        )
 
     from .routes import bp
 
@@ -58,7 +63,7 @@ def create_app(test_config=None):
 
     @app.cli.command("init-db")
     def init_db_command():
-        print("Run supabase/migrations/0001_initial_schema.sql in Supabase SQL Editor.")
+        print("Run the SQL files in supabase/migrations in order using the Supabase SQL Editor.")
 
     @app.cli.command("seed-db")
     def seed_db_command():

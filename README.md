@@ -6,6 +6,8 @@ Secure Flask web application for managing an organisation's professional develop
 
 - Flask
 - Supabase Python client/API
+- Supabase Auth JWT sessions
+- Supabase Row Level Security policies
 - Supabase hosted PostgreSQL
 - Render web service
 - GitHub Actions CI/CD
@@ -38,22 +40,23 @@ The app is designed for Render with a Supabase PostgreSQL database.
 Required Render environment variables:
 
 - `SUPABASE_URL`
-- `SUPABASE_KEY`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
 - `SECRET_KEY`
 - `ADMIN_USERNAME`
 - `ADMIN_PASSWORD`
 - `FLASK_ENV=production`
 
-Use a server-side Supabase key for `SUPABASE_KEY`. Do not expose this key in browser code or commit it to GitHub.
+Use the Supabase anon/publishable key for `SUPABASE_ANON_KEY`. Use the service role key only for `SUPABASE_SERVICE_ROLE_KEY`; it is required for creating/deleting Supabase Auth users and must never be exposed in browser code or committed to GitHub.
 
 ## Supabase Setup
 
 1. Open the Supabase SQL editor.
-2. Run `supabase/migrations/0001_initial_schema.sql`.
-3. Add `SUPABASE_URL` and `SUPABASE_KEY` to `.env` locally and to Render.
-4. Run `python -m flask --app run.py seed-db` locally once to create the admin user and sample books with hashed passwords.
+2. Run the SQL files in `supabase/migrations` in order.
+3. Add `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` to `.env` locally and to Render.
+4. Run `python -m flask --app run.py seed-db` locally once to create confirmed Supabase Auth users, linked app profiles, and sample books.
 
-The app uses Flask for application access control and the Supabase Python client/API for database operations. Supabase is used as the central PostgreSQL database so all users interact with the same data. The schema uses `users`, `books`, and `loans` so current book status and borrowing history can both be evidenced.
+The app uses Flask for page routing and user experience checks, while Supabase Auth issues JWTs and Supabase RLS enforces database-level access control. The schema uses `users`, `books`, and `loans` so current book status and borrowing history can both be evidenced. Usernames are mapped to internal Supabase Auth emails using the pattern `username@sedo-library.local`, keeping the visible login form username-based.
 
 ## CI/CD
 

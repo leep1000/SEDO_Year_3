@@ -6,7 +6,14 @@ from wtforms import Form, IntegerField, PasswordField, SelectField, StringField,
 class LoginForm(Form):
     username = StringField(
         "Username",
-        [validators.DataRequired(), validators.Length(min=3, max=50)],
+        [
+            validators.DataRequired(),
+            validators.Length(min=3, max=50),
+            validators.Regexp(
+                r"^[A-Za-z0-9._-]+$",
+                message="Username can only contain letters, numbers, dots, underscores and hyphens.",
+            ),
+        ],
     )
     password = PasswordField("Password", [validators.DataRequired(), validators.Length(max=128)])
 
@@ -14,7 +21,14 @@ class LoginForm(Form):
 class RegisterForm(Form):
     username = StringField(
         "Username",
-        [validators.DataRequired(), validators.Length(min=3, max=50)],
+        [
+            validators.DataRequired(),
+            validators.Length(min=3, max=50),
+            validators.Regexp(
+                r"^[A-Za-z0-9._-]+$",
+                message="Username can only contain letters, numbers, dots, underscores and hyphens.",
+            ),
+        ],
     )
     password = PasswordField(
         "Password",
@@ -67,5 +81,15 @@ class BookForm(Form):
 
 
 class UserEditForm(Form):
-    username = StringField("Username", [validators.DataRequired(), validators.Length(min=3, max=50)])
+    username = StringField(
+        "Username",
+        [
+            validators.DataRequired(),
+            validators.Length(min=3, max=50),
+            validators.Regexp(
+                r"^[A-Za-z0-9._-]+$",
+                message="Username can only contain letters, numbers, dots, underscores and hyphens.",
+            ),
+        ],
+    )
     role = SelectField("Role", choices=[("regular", "Regular"), ("admin", "Admin")])
