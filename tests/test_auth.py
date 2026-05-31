@@ -1,4 +1,17 @@
+from supabase_auth.errors import AuthApiError
+
+from app.repository import SupabaseRepository
+
 from .conftest import csrf_token, login
+
+
+class FailingSupabaseAuth:
+    def sign_in_with_password(self, credentials):
+        raise AuthApiError("Invalid login credentials", 400, "invalid_credentials")
+
+
+class FailingSupabaseAuthClient:
+    auth = FailingSupabaseAuth()
 
 
 def test_register_creates_supabase_auth_profile_and_assigns_regular_role(client, app):
@@ -23,6 +36,13 @@ def test_register_creates_supabase_auth_profile_and_assigns_regular_role(client,
 def test_login_rejects_invalid_password(client):
     response = login(client, password="wrong-password")
     assert b"Invalid username or password" in response.data
+
+
+def test_supabase_invalid_credentials_do_not_crash():
+    repo = SupabaseRepository.__new__(SupabaseRepository)
+    repo.auth_client = FailingSupabaseAuthClient()
+
+    assert repo.authenticate_user("adminuser", "wrong-password") is None
 
 
 def test_login_stores_supabase_jwt_session(client):

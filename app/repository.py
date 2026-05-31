@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from flask import current_app, has_request_context, session
 from supabase import create_client
+from supabase_auth.errors import AuthApiError
 from werkzeug.security import check_password_hash, generate_password_hash
 
 
@@ -34,9 +35,12 @@ class SupabaseRepository:
         return f"{username.strip().lower()}@sedo-library.local"
 
     def authenticate_user(self, username, password):
-        response = self.auth_client.auth.sign_in_with_password(
-            {"email": self._auth_email(username), "password": password}
-        )
+        try:
+            response = self.auth_client.auth.sign_in_with_password(
+                {"email": self._auth_email(username), "password": password}
+            )
+        except AuthApiError:
+            return None
         if not response.session or not response.user:
             return None
         profile = self.find_user_by_auth_id(response.user.id, use_service=True)
