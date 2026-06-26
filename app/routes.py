@@ -14,6 +14,7 @@ from .repository import get_repository
 from .security import admin_required, login_required, validate_csrf
 
 bp = Blueprint("library", __name__)
+_SESSION_ACTOR = object()
 
 
 @bp.route("/")
@@ -42,8 +43,19 @@ def login():
             session["supabase_access_token"] = auth_result["access_token"]
             session["supabase_refresh_token"] = auth_result["refresh_token"]
             session["supabase_expires_at"] = auth_result["expires_at"]
+            _audit_event(
+                "login_success",
+                target_type="user",
+                target_id=user["id"],
+                details={"username": user["username"]},
+            )
             flash("Login successful.", "success")
             return redirect(url_for("library.books"))
+        _audit_event(
+            "login_failed",
+            details={"username": form.username.data.strip() if form.username.data else ""},
+            actor_user_id=None,
+        )
         flash("Invalid username or password.", "danger")
     return render_template("login.html", form=form)
 
@@ -52,6 +64,8 @@ def login():
 @login_required
 def logout():
     validate_csrf()
+    actor_user_id = session.get("user_id")
+    _audit_event("logout", target_type="user", target_id=actor_user_id, actor_user_id=actor_user_id)
     session.clear()
     flash("You have been logged out.", "success")
     return redirect(url_for("library.login"))
@@ -67,7 +81,14 @@ def register():
         if repo.find_user_by_username(username, use_service=True):
             form.username.errors.append("Username already exists.")
         if form.validate() and not form.username.errors:
-            repo.create_user(username, form.password.data, "regular")
+            user = repo.create_user(username, form.password.data, "regular")
+            _audit_event(
+                "user_registered",
+                target_type="user",
+                target_id=user["id"],
+                details={"username": user["username"], "role": user["role"]},
+                actor_user_id=user["id"],
+            )
             flash("Registration successful. Please log in.", "success")
             return redirect(url_for("library.login"))
         _flash_form_errors(form)
@@ -104,7 +125,17 @@ def add_book():
         }
         checked_out_by_id = form.checked_out_by_id.data if session.get("role") == "admin" else None
         _apply_checkout_values(values, checked_out_by_id, repo)
-        repo.create_book(values)
+        book = repo.create_book(values)
+        _audit_event(
+            "book_created",
+            target_type="book",
+            target_id=book["id"],
+            details={
+                "title": book["title"],
+                "isbn": book["isbn"],
+                "status": book["status"],
+            },
+        )
         flash("Book added successfully.", "success")
         return redirect(url_for("library.books"))
     _flash_form_errors(form)
@@ -130,7 +161,14 @@ def edit_book(book_id):
             "amazon_url": form.amazon_url.data.strip() or None,
         }
         _apply_checkout_values(values, form.checked_out_by_id.data, repo)
+        changes = _changed_values(book, values)
         repo.update_book(book_id, values)
+        _audit_event(
+            "book_updated",
+            target_type="book",
+            target_id=book_id,
+            details={"title": values["title"], "changes": changes},
+        )
         flash("Book updated successfully.", "success")
         return redirect(url_for("library.books"))
     _flash_form_errors(form)
@@ -149,7 +187,13 @@ def checkout_book(book_id):
         flash("This book is already checked out.", "warning")
         return redirect(url_for("library.books"))
     repo.update_book(book_id, {"status": "checked_out", "checked_out_by_id": session["user_id"]})
-    repo.create_loan(book_id, session["user_id"], session["user_id"])
+    loan = repo.create_loan(book_id, session["user_id"], session["user_id"])
+    _audit_event(
+        "book_checked_out",
+        target_type="book",
+        target_id=book_id,
+        details={"title": book["title"], "loan_id": loan["id"], "borrower_user_id": session["user_id"]},
+    )
     flash("Book checked out successfully.", "success")
     return redirect(url_for("library.books"))
 
@@ -167,6 +211,12 @@ def return_book(book_id):
         return redirect(url_for("library.books"))
     repo.close_active_loan(book_id, session["user_id"])
     repo.update_book(book_id, {"status": "available", "checked_out_by_id": None})
+    _audit_event(
+        "book_returned",
+        target_type="book",
+        target_id=book_id,
+        details={"title": book["title"], "borrower_user_id": book["checked_out_by_id"]},
+    )
     flash("Book returned successfully.", "success")
     return redirect(url_for("library.books"))
 
@@ -183,6 +233,12 @@ def delete_book(book_id):
         flash("You can only delete books that you added.", "danger")
         return redirect(url_for("library.books"))
     repo.delete_book(book_id)
+    _audit_event(
+        "book_deleted",
+        target_type="book",
+        target_id=book_id,
+        details={"title": book["title"], "isbn": book["isbn"]},
+    )
     flash(f"Book '{book['title']}' deleted.", "success")
     return redirect(url_for("library.books"))
 
@@ -206,6 +262,12 @@ def delete_account():
     user = repo.get_user(session["user_id"])
     if not user:
         abort(404)
+    _audit_event(
+        "account_deleted",
+        target_type="user",
+        target_id=user["id"],
+        details={"username": user["username"]},
+    )
     repo.delete_user(user["id"], session["user_id"])
     session.clear()
     flash("Your account has been deleted.", "success")
@@ -273,10 +335,18 @@ def edit_user(user_id):
         if existing and existing["id"] != int(user_id):
             form.username.errors.append("Username already exists.")
         else:
-            repo.update_user(user_id, {"username": form.username.data.strip(), "role": form.role.data})
+            values = {"username": form.username.data.strip(), "role": form.role.data}
+            changes = _changed_values(user, values)
+            repo.update_user(user_id, values)
             if session["user_id"] == int(user_id):
                 session["username"] = form.username.data.strip()
                 session["role"] = form.role.data
+            _audit_event(
+                "user_updated",
+                target_type="user",
+                target_id=user_id,
+                details={"username": values["username"], "changes": changes},
+            )
             flash("User updated successfully.", "success")
             return redirect(url_for("library.users"))
     _flash_form_errors(form)
@@ -296,8 +366,33 @@ def delete_user(user_id):
     if not user:
         abort(404)
     repo.delete_user(user_id, session["user_id"])
+    _audit_event(
+        "user_deleted",
+        target_type="user",
+        target_id=user_id,
+        details={"username": user["username"]},
+    )
     flash(f"User '{user['username']}' deleted.", "success")
     return redirect(url_for("library.users"))
+
+
+def _audit_event(
+    event_type,
+    target_type=None,
+    target_id=None,
+    details=None,
+    actor_user_id=_SESSION_ACTOR,
+):
+    actor_id = session.get("user_id") if actor_user_id is _SESSION_ACTOR else actor_user_id
+    get_repository().record_audit_event(
+        event_type,
+        actor_user_id=actor_id,
+        target_type=target_type,
+        target_id=target_id,
+        details=details or {},
+        ip_address=request.remote_addr,
+        user_agent=request.user_agent.string,
+    )
 
 
 def _apply_checkout_values(values, checked_out_by_id, repo):
@@ -313,6 +408,14 @@ def _apply_checkout_values(values, checked_out_by_id, repo):
 
 def _can_delete_book(book):
     return session.get("role") == "admin" or book.get("created_by_id") == session.get("user_id")
+
+
+def _changed_values(original, values):
+    return {
+        key: {"from": original.get(key), "to": value}
+        for key, value in values.items()
+        if original.get(key) != value
+    }
 
 
 def _flash_form_errors(form):

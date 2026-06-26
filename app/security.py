@@ -44,11 +44,25 @@ def admin_required(view):
     @wraps(view)
     def wrapped_view(**kwargs):
         if not is_admin():
+            _record_permission_denied(view.__name__)
             flash("You do not have permission to perform that action.", "danger")
             return redirect(url_for("library.books"))
         return view(**kwargs)
 
     return wrapped_view
+
+
+def _record_permission_denied(view_name):
+    from .repository import get_repository
+
+    get_repository().record_audit_event(
+        "permission_denied",
+        actor_user_id=session.get("user_id"),
+        target_type="route",
+        details={"endpoint": request.endpoint or view_name, "path": request.path},
+        ip_address=request.remote_addr,
+        user_agent=request.user_agent.string,
+    )
 
 
 def generate_csrf_token():

@@ -37,6 +37,34 @@ def test_checkout_and_return_records_loan_history(client, app):
     assert app.config["REPOSITORY"].loans[0]["returned_at"] is not None
 
 
+def test_checkout_and_return_records_audit_events(client, app):
+    login(client, "regularuser", "RegularPass123!")
+
+    client.post(
+        "/books/1/checkout",
+        data={"_csrf_token": csrf_token(client)},
+        follow_redirects=True,
+    )
+    client.post(
+        "/books/1/return",
+        data={"_csrf_token": csrf_token(client)},
+        follow_redirects=True,
+    )
+
+    audit_events = app.config["REPOSITORY"].audit_events
+    checkout_event = next(
+        event for event in audit_events if event["event_type"] == "book_checked_out"
+    )
+    return_event = next(event for event in audit_events if event["event_type"] == "book_returned")
+
+    assert checkout_event["actor_user_id"] == 2
+    assert checkout_event["target_type"] == "book"
+    assert checkout_event["target_id"] == 1
+    assert checkout_event["details"]["title"] == "Clean Code"
+    assert return_event["actor_user_id"] == 2
+    assert return_event["target_id"] == 1
+
+
 def test_regular_user_can_add_book(client):
     login(client, "regularuser", "RegularPass123!")
     response = client.post(

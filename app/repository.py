@@ -1,7 +1,7 @@
 from copy import deepcopy
 from datetime import datetime, timezone
 
-from flask import current_app, has_request_context, session
+from flask import current_app, has_app_context, has_request_context, session
 from supabase import create_client
 from supabase_auth.errors import AuthApiError
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -33,6 +33,47 @@ class SupabaseRepository:
 
     def _auth_email(self, username):
         return f"{username.strip().lower()}@sedo-library.local"
+
+    def record_audit_event(
+        self,
+        event_type,
+        actor_user_id=None,
+        target_type=None,
+        target_id=None,
+        details=None,
+        ip_address=None,
+        user_agent=None,
+    ):
+        if not self.service_client:
+            if has_app_context():
+                current_app.logger.warning(
+                    "Skipping audit event because SUPABASE_SERVICE_ROLE_KEY is not configured: %s",
+                    event_type,
+                )
+            return None
+
+        try:
+            response = (
+                self._client(use_service=True)
+                .table("audit_events")
+                .insert(
+                    {
+                        "event_type": event_type,
+                        "actor_user_id": actor_user_id,
+                        "target_type": target_type,
+                        "target_id": target_id,
+                        "details": details or {},
+                        "ip_address": ip_address,
+                        "user_agent": user_agent,
+                    }
+                )
+                .execute()
+            )
+        except Exception:
+            if has_app_context():
+                current_app.logger.exception("Failed to record audit event: %s", event_type)
+            return None
+        return response.data[0] if response.data else None
 
     def authenticate_user(self, username, password):
         try:
@@ -304,9 +345,11 @@ class InMemoryRepository:
         self.users = []
         self.books = []
         self.loans = []
+        self.audit_events = []
         self._user_id = 1
         self._book_id = 1
         self._loan_id = 1
+        self._audit_event_id = 1
 
     def find_user_by_username(self, username, use_service=False):
         return next((u for u in self.users if u["username"] == username), None)
@@ -328,6 +371,31 @@ class InMemoryRepository:
             "refresh_token": refresh_token,
             "expires_at": None,
         }
+
+    def record_audit_event(
+        self,
+        event_type,
+        actor_user_id=None,
+        target_type=None,
+        target_id=None,
+        details=None,
+        ip_address=None,
+        user_agent=None,
+    ):
+        audit_event = {
+            "id": self._audit_event_id,
+            "event_type": event_type,
+            "actor_user_id": actor_user_id,
+            "target_type": target_type,
+            "target_id": target_id,
+            "details": details or {},
+            "ip_address": ip_address,
+            "user_agent": user_agent,
+            "created_at": now_iso(),
+        }
+        self._audit_event_id += 1
+        self.audit_events.append(audit_event)
+        return deepcopy(audit_event)
 
     def list_users(self):
         return sorted(deepcopy(self.users), key=lambda u: u["username"])
